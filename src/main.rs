@@ -9,16 +9,15 @@ use crossterm::{
 
 use std::io::{stdout, Write};
 
-use scorched_earth::{Board, Direction, PlayerColor, TileContents, Vector};
+use scorched_earth::{Board, Direction, Move, PlayerColor, TileContents, Vector};
 
 // Width/height of the board
-const BOARD_SIZE: usize = 10;
+const BOARD_SIZE: usize = 11;
 
 fn player_term_color(color: PlayerColor) -> Color {
     match color {
         PlayerColor::Blue => Color::Blue,
         PlayerColor::Cyan => Color::Cyan,
-        PlayerColor::White => Color::White,
         PlayerColor::Yellow => Color::Yellow,
         PlayerColor::Green => Color::Green,
         PlayerColor::Magenta => Color::Magenta,
@@ -156,38 +155,84 @@ fn main() -> Result<()> {
             draw_border(player_term_color(b.players[i].color))?;
 
             // loop until a valid move is made
+            let mut m: Option<Move> = None;
             loop {
                 match crossterm::event::read()? {
                     // Wait for a keypress and only accept it if it's wasd or q
                     Event::Key(KeyEvent {
-                        code: KeyCode::Char(c @ ('w' | 'a' | 's' | 'd' | 'q')),
+                        code: KeyCode::Char(c @ ('w' | 'a' | 's' | 'd' | 'q' | ' ')),
                         ..
                     }) => {
+                        // If there was previously a move preview, re-render that tile so it goes
+                        // away
+                        if let Some(potential_move) = m {
+                            let target_position = b.players[i].pos + potential_move.to_vector();
+                            if let Some(contents) = b.tile_contents_at(target_position) {
+                                draw_tile_contents(target_position, contents)?;
+                            }
+                        }
+
                         // Quit on q, otherwise get the direction that was pressed
-                        let dir = match c {
+                        let input_dir = match c {
                             'q' => break 'main,
                             'w' => Direction::Up,
                             'a' => Direction::Left,
                             's' => Direction::Down,
                             'd' => Direction::Right,
+                            ' ' => {
+                                if let Some(valid_move) =
+                                    m.filter(|potential_move| b.is_move_valid(i, *potential_move))
+                                {
+                                    let res = b.make_move(i, valid_move);
+                                    for (pos, contents) in res.changes {
+                                        draw_tile_contents(pos, contents)?;
+                                    }
+
+                                    if let Some(color) = res.winner {
+                                        fill_box(player_term_color(color))?;
+                                        break 'main;
+                                    }
+
+                                    break;
+                                } else {
+                                    continue;
+                                }
+                            }
                             _ => unreachable!(),
                         };
 
-                        // Try to actually make the move, and try again if it's invalid
-                        match b.try_move(i, dir) {
-                            Some(res) => {
-                                for (pos, contents) in res.changes {
-                                    draw_tile_contents(pos, contents)?;
-                                }
-
-                                if let Some(color) = res.winner {
-                                    fill_box(player_term_color(color))?;
-                                    break 'main;
-                                }
-
-                                break;
+                        match m.as_mut() {
+                            None => {
+                                m = Some(Move {
+                                    dir: input_dir,
+                                    len: 1,
+                                })
                             }
-                            None => {}
+                            Some(old_move) => {
+                                if input_dir == old_move.dir && old_move.len == 1 {
+                                    old_move.len = 2;
+                                } else if input_dir == old_move.dir.opposite() && old_move.len == 2
+                                {
+                                    old_move.len = 1;
+                                } else {
+                                    old_move.len = 1;
+                                    old_move.dir = input_dir;
+                                }
+                            }
+                        }
+
+                        if let Some(potential_move) = m {
+                            let target_position = b.players[i].pos + potential_move.to_vector();
+                            if (0..BOARD_SIZE as isize).contains(&target_position.x)
+                                && (0..BOARD_SIZE as isize).contains(&target_position.y)
+                            {
+                                let color = if b.is_move_valid(i, potential_move) {
+                                    Color::White
+                                } else {
+                                    Color::Grey
+                                };
+                                draw_tile(target_position, color)?;
+                            }
                         }
                     }
 
