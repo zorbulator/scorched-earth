@@ -9,7 +9,7 @@ use crossterm::{
 
 use std::io::{stdout, Write};
 
-use scorched_earth::{Board, Direction, Move, PlayerColor, TileContents, Vector};
+use scorched_earth_core::{Board, Direction, Move, PlayerColor, TileContents, Vector};
 
 // Width/height of the board
 const BOARD_SIZE: usize = 11;

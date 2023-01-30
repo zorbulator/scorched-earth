@@ -1,11 +1,6 @@
-[package]
-name = "scorched-earth"
-version = "0.1.0"
-edition = "2021"
+[workspace]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies]
-anyhow = "1.0.68"
-crossterm = "0.25.0"
-derive_more = "0.99.17"
+members = [
+  "scorched_earth_tui",
+  "scorched_earth_core",
+]
