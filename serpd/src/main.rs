@@ -3,7 +3,7 @@ use dashmap::DashMap;
 use once_cell::sync::Lazy;
 use std::{env, sync::Arc};
 use tokio::{
-    io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufStream},
+    io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufStream, Interest},
     net::{TcpListener, TcpStream},
 };
 
@@ -19,15 +19,12 @@ async fn main() -> Result<(), anyhow::Error> {
     println!("Starting server on {}", addr);
 
     loop {
-        println!("waiting for connection");
         let (stream, _) = listener.accept().await?;
-        println!("received connection");
         tokio::spawn(async move {
             if let Err(e) = process(stream).await {
                 println!("Error: {}", e);
             }
         });
-        println!("spawned task");
     }
 }
 
@@ -46,16 +43,50 @@ async fn process(mut tcp_stream: TcpStream) -> Result<(), anyhow::Error> {
     };
 
     println!("received request: {} {}", method, id);
-    stream.write(b"ok\n").await?;
     stream.flush().await?;
 
     match method {
         "host" => {
             println!("opening {}", id);
+
+            if MAP.contains_key(id) {
+                if MAP
+                    .get_mut(id)
+                    .unwrap()
+                    .ready(Interest::WRITABLE)
+                    .await?
+                    .is_write_closed()
+                {
+                    MAP.remove(id);
+                } else {
+                    stream.write(b"fail\n").await?;
+                    stream.flush().await?;
+                    bail!("tried to create room that already exists");
+                }
+            }
+
+            stream.write(b"ok\n").await?;
+            stream.flush().await?;
             MAP.insert(id.to_string(), tcp_stream);
         }
         "conn" => {
-            let Some(mut other_stream) = MAP.get_mut(&id.to_string()) else { stream.write(b"fail\n").await?; stream.flush().await?; bail!("tried to join nonexistent room") };
+            // Remove the room if the connection is broken
+            if let Some(stream) = MAP.get_mut(id) {
+                if stream.ready(Interest::WRITABLE).await?.is_write_closed() {
+                    drop(stream);
+                    MAP.remove(id);
+                }
+            }
+
+            let Some(mut other_stream) = MAP.get_mut(&id.to_string()) else {
+                stream.write(b"fail\n").await?;
+                stream.flush().await?;
+                bail!("tried to join nonexistent room");
+            };
+
+            stream.write(b"ok\n").await?;
+            stream.flush().await?;
+
             tcp_stream.write(b"connected\n").await?;
             other_stream.write(b"connected\n").await?;
             pipe(&mut tcp_stream, &mut other_stream).await?;
