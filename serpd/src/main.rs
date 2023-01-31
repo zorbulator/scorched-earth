@@ -1,28 +1,34 @@
 use anyhow::bail;
 use dashmap::DashMap;
+use env_logger::Env;
 use once_cell::sync::Lazy;
 use std::{env, sync::Arc};
 use tokio::{
     io::{AsyncBufReadExt, AsyncReadExt, AsyncWriteExt, BufStream, Interest},
     net::{TcpListener, TcpStream},
 };
+use log::{info, error};
 
 static MAP: Lazy<Arc<DashMap<String, TcpStream>>> = Lazy::new(|| Arc::new(DashMap::new()));
 
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
+    let env = Env::default()
+        .filter_or("RUST_LOG", "info");
+    env_logger::init_from_env(env);
+
     let addr = env::args()
         .nth(1)
         .unwrap_or_else(|| "127.0.0.1:8080".to_string());
 
     let listener = TcpListener::bind(&addr).await?;
-    println!("Starting server on {}", addr);
+    info!("Starting server on {}", addr);
 
     loop {
         let (stream, _) = listener.accept().await?;
         tokio::spawn(async move {
             if let Err(e) = process(stream).await {
-                println!("Error: {}", e);
+                error!("Error: {}", e);
             }
         });
     }
@@ -42,12 +48,12 @@ async fn process(mut tcp_stream: TcpStream) -> Result<(), anyhow::Error> {
         bail!("invalid header line")
     };
 
-    println!("received request: {} {}", method, id);
+    info!("received request: {} {}", method, id);
     stream.flush().await?;
 
     match method {
         "host" => {
-            println!("opening {}", id);
+            info!("opening {}", id);
 
             if MAP.contains_key(id) {
                 if MAP
@@ -90,7 +96,7 @@ async fn process(mut tcp_stream: TcpStream) -> Result<(), anyhow::Error> {
             tcp_stream.write(b"connected\n").await?;
             other_stream.write(b"connected\n").await?;
             pipe(&mut tcp_stream, &mut other_stream).await?;
-            println!("closing {}", id);
+            info!("closing {}", id);
             drop(tcp_stream);
             drop(other_stream);
             MAP.remove(id);
@@ -109,14 +115,14 @@ async fn pipe(s1: &mut TcpStream, s2: &mut TcpStream) -> Result<(), anyhow::Erro
             res = s1.read_buf(&mut buf1) => {
                 if let Ok(0) = res { s2.shutdown().await?; return Ok(()) };
                 if let Err(e) = res { s2.shutdown().await?; bail!("s1 failed: {}", e)};
-                println!("s1 says {:?}", buf1);
+                info!("s1 says {:?}", buf1);
                 s2.write(&buf1).await?;
                 buf1.clear();
             }
             res = s2.read_buf(&mut buf2) => {
                 if let Ok(0) = res { s1.shutdown().await?; return Ok(()) };
                 if let Err(e) = res { s1.shutdown().await?; bail!("s2 failed: {}", e)};
-                println!("s2 says {:?}", buf2);
+                info!("s2 says {:?}", buf2);
                 s1.write(&buf2).await?;
                 buf2.clear();
             }
