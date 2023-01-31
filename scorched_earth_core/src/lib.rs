@@ -197,6 +197,12 @@ impl<const N: usize> Board<N> {
             }
         }
 
+        // If you're on a scorched tile (probably because someone moved over you)
+        // or you're somehow out of bounds you lose
+        if let Some(ScorchState::Scorched) | None = self.scorch_state_at(self.players[player_index].pos)  {
+            return true;
+        }
+
         [
             Direction::Up,
             Direction::Left,
