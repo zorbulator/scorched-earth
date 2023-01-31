@@ -4,4 +4,5 @@ members = [
   "scorched_earth_tui",
   "scorched_earth_core",
   "serpd",
+  "serp",
 ]
