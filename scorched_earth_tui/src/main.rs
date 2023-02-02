@@ -1,4 +1,5 @@
-use anyhow::Result;
+use anyhow::{bail, Result};
+use clap::{command, Parser, Subcommand};
 use crossterm::{
     cursor::{Hide, MoveDown, MoveLeft, MoveRight, MoveUp, RestorePosition, SavePosition, Show},
     event::{Event, KeyCode, KeyEvent},
@@ -6,13 +7,35 @@ use crossterm::{
     style::{Color, SetBackgroundColor},
     terminal::{disable_raw_mode, enable_raw_mode},
 };
+use rand::{distributions::Alphanumeric, thread_rng, Rng};
+use scorched_earth_network::{Connection, MoveMessage};
 
-use std::io::{stdout, Write};
+use std::{
+    ffi::OsString,
+    io::{stdout, Write},
+    sync::mpsc::channel, time::Duration,
+};
 
-use scorched_earth_core::{Board, Direction, Move, PlayerColor, TileContents, Vector};
+use scorched_earth_core::{Board, Direction, Move, PlayerColor, TileContents, Vector, BOARD_SIZE};
 
-// Width/height of the board
-const BOARD_SIZE: usize = 11;
+#[derive(Debug, Parser)]
+#[command(name = "scorched_earth_tui")]
+#[command(about = "TUI for the game Scorched Earth", long_about = None)]
+struct Cli {
+    #[command(subcommand)]
+    command: Option<Commands>,
+    #[arg(short, long)]
+    relay: Option<OsString>,
+}
+
+#[derive(Debug, Subcommand)]
+enum Commands {
+    Host,
+    #[command(arg_required_else_help = true)]
+    Join {
+        id: OsString,
+    },
+}
 
 fn player_term_color(color: PlayerColor) -> Color {
     match color {
@@ -25,7 +48,7 @@ fn player_term_color(color: PlayerColor) -> Color {
 }
 
 // Initial setup for drawing moves
-fn setup_drawing<const N: usize>(board: &Board<N>) -> crossterm::Result<()> {
+fn setup_drawing(board: &Board) -> crossterm::Result<()> {
     // Disables typing to the terminal so keyboard input isn't visible
     enable_raw_mode()?;
     print!("\n");
@@ -34,8 +57,8 @@ fn setup_drawing<const N: usize>(board: &Board<N>) -> crossterm::Result<()> {
     execute!(stdout(), Hide,)?;
 
     // Draw the board with a grey border and blank inside
-    for i in 0..N + 2 {
-        for j in 0..N + 2 {
+    for i in 0..BOARD_SIZE + 2 {
+        for j in 0..BOARD_SIZE + 2 {
             let color = if i == 0 || j == 0 || i == BOARD_SIZE + 1 || j == BOARD_SIZE + 1 {
                 Color::DarkMagenta
             } else {
@@ -144,63 +167,136 @@ fn fill_box(color: Color) -> crossterm::Result<()> {
     Ok(())
 }
 
-fn main() -> Result<()> {
-    let mut b = Board::<BOARD_SIZE>::default();
+enum Keypress {
+    Dir(Direction),
+    Confirm,
+    Quit,
+}
+
+fn read_key() -> crossterm::Result<Keypress> {
+    loop {
+        match crossterm::event::read()? {
+            // Wait for a keypress and only accept it if it's wasd or q
+            Event::Key(KeyEvent {
+                code: KeyCode::Char(c @ ('w' | 'a' | 's' | 'd' | 'q' | ' ')),
+                ..
+            }) => {
+                return Ok(match c {
+                    'w' => Keypress::Dir(Direction::Up),
+                    'a' => Keypress::Dir(Direction::Left),
+                    's' => Keypress::Dir(Direction::Down),
+                    'd' => Keypress::Dir(Direction::Right),
+                    'q' => Keypress::Quit,
+                    ' ' => Keypress::Confirm,
+                    _ => unreachable!(),
+                })
+            }
+            _ => {}
+        }
+    }
+}
+
+fn run(mut b: Board, mut conn: Option<Connection>) -> Result<()> {
     setup_drawing(&b)?;
-
     'main: loop {
-        // Give each player a turn in order until the main loop is over
-        for i in 0..b.players.len() {
-            // Set the border to show the current player's color
-            draw_border(player_term_color(b.players[i].color))?;
+        let i = b.turn;
+        let other_player = (i + 1) % 2;
 
-            // loop until a valid move is made
-            let mut m: Option<Move> = None;
-            loop {
-                match crossterm::event::read()? {
-                    // Wait for a keypress and only accept it if it's wasd or q
-                    Event::Key(KeyEvent {
-                        code: KeyCode::Char(c @ ('w' | 'a' | 's' | 'd' | 'q' | ' ')),
-                        ..
-                    }) => {
-                        // If there was previously a move preview, re-render that tile so it goes
-                        // away
-                        if let Some(potential_move) = m {
-                            let target_position = b.players[i].pos + potential_move.to_vector();
-                            if let Some(contents) = b.tile_contents_at(target_position) {
-                                draw_tile_contents(target_position, contents)?;
+        // Set the border to show the current player's color
+        draw_border(player_term_color(b.players[i].color))?;
+
+        // loop until a valid move is made
+        let mut m: Option<Move> = None;
+        let (next_move, other_player_board): (Move, Option<Board>) = if let Some(c) =
+            conn.as_mut().filter(|c| c.player_num == i)
+        {
+            // If connected to another player and it's their turn, receive their move over the
+            // network instead of making the move locally
+
+            enum WaitResult {
+                Move(Result<MoveMessage, scorched_earth_network::Error>),
+                Cancelled,
+            }
+
+            // Bit of a hack with two channels and threads to let players quit when it's not their
+            // turn. The first thread waits for a move and sends WaitResult::Move over tx, while
+            // the other thread sends Cancelled if q is pressed. Whichever one happens first is
+            // used.
+            let other_move = crossbeam::scope(|s| {
+                let (tx, rx) = channel();
+                let tx2 = tx.clone();
+                // Need another channel to cancel the canceller if the receive which would have
+                // been cancelled completes
+                let (cancel_tx, cancel_rx) = channel();
+
+                s.spawn(move |_| {
+                    tx.send(WaitResult::Move(c.recv_move())).expect("failed to get received move");
+                    // Tell the other thread to stop now
+                    cancel_tx.send(())
+                });
+
+                s.spawn(move |_| {
+                    while let Err(_) = cancel_rx.try_recv() {
+                        if let Ok(true) = crossterm::event::poll(Duration::from_millis(100)) {
+                            match crossterm::event::read() {
+                                // Wait for a keypress and only accept it if it's q
+                                Ok(Event::Key(KeyEvent {
+                                    code: KeyCode::Char('q'),
+                                    ..
+                                })) => {
+                                        tx2.send(WaitResult::Cancelled).expect("Failed to send cancel message from pressing q");
+                                    }
+                                _ => {}
                             }
                         }
+                    }
+                });
 
-                        // Quit on q, otherwise get the direction that was pressed
-                        let input_dir = match c {
-                            'q' => break 'main,
-                            'w' => Direction::Up,
-                            'a' => Direction::Left,
-                            's' => Direction::Down,
-                            'd' => Direction::Right,
-                            ' ' => {
-                                if let Some(valid_move) =
-                                    m.filter(|potential_move| b.is_move_valid(i, *potential_move))
-                                {
-                                    let res = b.make_move(i, valid_move);
-                                    for (pos, contents) in res.changes {
-                                        draw_tile_contents(pos, contents)?;
-                                    }
+                if let Ok(WaitResult::Move(m)) = rx.recv() {
+                    m
+                } else {
+                    finish_drawing().expect("Failed to reset terminal");
+                    std::process::exit(0);
+                }
+            })
+            .expect("Failed to join threads")?;
 
-                                    if let Some(color) = res.winner {
-                                        fill_box(player_term_color(color))?;
-                                        break 'main;
-                                    }
+            if other_move.player != i {
+                bail!("Player moved and it isn't their turn!");
+            }
 
-                                    break;
-                                } else {
-                                    continue;
-                                }
-                            }
-                            _ => unreachable!(),
-                        };
+            (other_move.new_move, Some(other_move.new_board.clone()))
+        } else {
+            // Otherwise preview moves in a loop until one is selected locally
+            loop {
+                let key = read_key()?;
 
+                // Redraw the tile from the last move preview
+                if let Some(potential_move) = m {
+                    for tile in potential_move.tiles_along_path() {
+                        let target_position = b.players[i].pos + tile;
+                        if let Some(contents) = b.tile_contents_at(target_position) {
+                            draw_tile_contents(target_position, contents)?;
+                        }
+                    }
+                }
+
+                match key {
+                    Keypress::Quit => {
+                        break 'main;
+                    }
+
+                    Keypress::Confirm => {
+                        if let Some(valid_move) =
+                            m.filter(|potential_move| b.is_move_valid(i, *potential_move))
+                        {
+                            break (valid_move, None);
+                        } else {
+                            continue;
+                        }
+                    }
+
+                    Keypress::Dir(input_dir) => {
                         match m.as_mut() {
                             None => {
                                 m = Some(Move {
@@ -231,17 +327,89 @@ fn main() -> Result<()> {
                                 } else {
                                     Color::Grey
                                 };
-                                draw_tile(target_position, color)?;
+                                for tile in potential_move.tiles_along_path() {
+                                    draw_tile(b.players[i].pos + tile, color)?;
+                                }
                             }
                         }
                     }
+                }
+            }
+        };
 
-                    _ => {}
-                };
+        let res = b.make_move(i, next_move);
+        for (pos, contents) in res.changes {
+            draw_tile_contents(pos, contents)?;
+        }
+
+        if let Some(b2) = other_player_board {
+            // If the opponent has a board that doesn't match, they're probably cheating or
+            // something
+            if b != b2 {
+                bail!("Other player's board doesn't match!");
             }
         }
-    }
 
-    finish_drawing()?;
+        if let Some(c) = conn.as_mut() {
+            // If there's another player connected but it's not their turn, send them our move
+            if c.player_num == other_player {
+                c.send_move(MoveMessage {
+                    new_board: b.clone(),
+                    new_move: next_move,
+                    player: i,
+                })?;
+            }
+        }
+
+        if let Some(color) = res.winner {
+            fill_box(player_term_color(color))?;
+            break 'main;
+        }
+    }
     Ok(())
+}
+
+fn run_host(addr: &str) -> Result<()> {
+    let mut board = Board::default();
+    let mut rng = thread_rng();
+    board.turn = if rng.gen_bool(0.5) { 1 } else { 0 };
+    let mut secret = [0u8; 32];
+    for b in &mut secret {
+        *b = rng.sample(Alphanumeric);
+    }
+    let secret_string = String::from_utf8_lossy(&secret);
+    println!("Hosting game with id: {}", secret_string);
+    let conn = Connection::host(addr, &secret, &board)?;
+    run(board, Some(conn))
+}
+
+fn run_join(addr: &str, id: &str) -> Result<()> {
+    let (conn, board) = Connection::conn(addr, id.as_bytes())?;
+    run(board, Some(conn))
+}
+
+fn run_offline() -> Result<()> {
+    run(Board::default(), None)
+}
+
+fn try_main() -> Result<()> {
+    let args = Cli::parse();
+    let addr = args.relay.map_or("127.0.0.1:8080".to_string(), |s| {
+        s.to_str().expect("invalid relay address").to_string()
+    });
+
+    match args.command {
+        None => run_offline()?,
+        Some(Commands::Host) => run_host(&addr)?,
+        Some(Commands::Join { id }) => run_join(&addr, id.to_str().expect("invalid ID"))?,
+    }
+    Ok(())
+}
+
+fn main() {
+    let res = try_main();
+    finish_drawing().expect("Failed to reset terminal");
+    if let Err(e) = res {
+        eprintln!("Error: {}", e);
+    }
 }

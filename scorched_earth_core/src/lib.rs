@@ -1,6 +1,9 @@
 use derive_more::{Add, AddAssign, Mul};
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Copy)]
+pub const BOARD_SIZE: usize = 11;
+
+#[derive(Clone, Copy, Serialize, Deserialize, PartialEq)]
 pub enum ScorchState {
     Empty,
     Scorched,
@@ -22,13 +25,13 @@ impl From<ScorchState> for TileContents {
     }
 }
 
-#[derive(Clone, Copy, Add, AddAssign, Mul, PartialEq)]
+#[derive(Clone, Copy, Add, AddAssign, Mul, PartialEq, Serialize, Deserialize)]
 pub struct Vector {
     pub x: isize,
     pub y: isize,
 }
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum Direction {
     Up,
     Down,
@@ -36,7 +39,7 @@ pub enum Direction {
     Right,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Serialize, Deserialize)]
 pub struct Move {
     pub dir: Direction,
     pub len: usize,
@@ -45,6 +48,15 @@ pub struct Move {
 impl Move {
     pub fn to_vector(&self) -> Vector {
         self.dir.to_vector() * (self.len as isize)
+    }
+
+    pub fn tiles_along_path(&self) -> Vec<Vector> {
+        let v = self.dir.to_vector();
+        let mut tiles = Vec::new();
+        for i in 1..=self.len as isize {
+            tiles.push(v * i);
+        }
+        tiles
     }
 }
 
@@ -68,7 +80,7 @@ impl Direction {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Serialize, Deserialize, PartialEq)]
 pub enum PlayerColor {
     Blue,
     Cyan,
@@ -77,6 +89,7 @@ pub enum PlayerColor {
     Magenta,
 }
 
+#[derive(Clone, Serialize, Deserialize, PartialEq)]
 pub struct Player {
     pub pos: Vector,
     pub color: PlayerColor,
@@ -87,12 +100,14 @@ pub struct TurnResult {
     pub changes: Vec<(Vector, TileContents)>,
 }
 
-pub struct Board<const N: usize> {
-    pub cells: [[ScorchState; N]; N],
+#[derive(Clone, Serialize, Deserialize, PartialEq)]
+pub struct Board {
+    pub cells: [[ScorchState; BOARD_SIZE]; BOARD_SIZE],
     pub players: Vec<Player>,
+    pub turn: usize,
 }
 
-impl<const N: usize> Board<N> {
+impl Board {
     // Get the state of the tile at this position, or return None if there isn't one there
     pub fn scorch_state_at(&self, pos: Vector) -> Option<&ScorchState> {
         let Ok(x): Result<usize, _> = pos.x.try_into() else { return None };
@@ -184,6 +199,8 @@ impl<const N: usize> Board<N> {
             winner = Some(self.players[1 - player_index].color);
         }
 
+        self.turn = (self.turn + 1) % 2;
+
         TurnResult { winner, changes }
     }
 
@@ -199,7 +216,9 @@ impl<const N: usize> Board<N> {
 
         // If you're on a scorched tile (probably because someone moved over you)
         // or you're somehow out of bounds you lose
-        if let Some(ScorchState::Scorched) | None = self.scorch_state_at(self.players[player_index].pos)  {
+        if let Some(ScorchState::Scorched) | None =
+            self.scorch_state_at(self.players[player_index].pos)
+        {
             return true;
         }
 
@@ -218,11 +237,11 @@ impl<const N: usize> Board<N> {
     }
 }
 
-impl<const N: usize> Default for Board<N> {
+impl Default for Board {
     // Make a default board that's empty with a player in opposite corners
     fn default() -> Self {
         Board {
-            cells: [[ScorchState::Empty; N]; N],
+            cells: [[ScorchState::Empty; BOARD_SIZE]; BOARD_SIZE],
             players: vec![
                 Player {
                     pos: Vector { x: 0, y: 0 },
@@ -230,12 +249,13 @@ impl<const N: usize> Default for Board<N> {
                 },
                 Player {
                     pos: Vector {
-                        x: (N - 1) as isize,
-                        y: (N - 1) as isize,
+                        x: (BOARD_SIZE - 1) as isize,
+                        y: (BOARD_SIZE - 1) as isize,
                     },
                     color: PlayerColor::Yellow,
                 },
             ],
+            turn: 0,
         }
     }
 }

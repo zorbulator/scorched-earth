@@ -7,5 +7,9 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.68"
+clap = { version = "4.1.4", features = ["derive"] }
+crossbeam = "0.8.2"
 crossterm = "0.25.0"
+rand = "0.8.5"
 scorched_earth_core = { path = "../scorched_earth_core" }
+scorched_earth_network = { version = "0.1.0", path = "../scorched_earth_network" }
