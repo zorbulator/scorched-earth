@@ -394,7 +394,7 @@ fn run_offline() -> Result<()> {
 
 fn try_main() -> Result<()> {
     let args = Cli::parse();
-    let addr = args.relay.map_or("127.0.0.1:8080".to_string(), |s| {
+    let addr = args.relay.map_or("zorbulator.com:8080".to_string(), |s| {
         s.to_str().expect("invalid relay address").to_string()
     });
 
