@@ -1,8 +1,9 @@
-use anyhow::bail;
+use std::error::Error;
+
 use scorched_earth_core::Board;
 use scorched_earth_network::Connection;
 
-fn main() -> Result<(), anyhow::Error> {
+fn main() -> Result<(), Box<dyn Error>> {
     let param = std::env::args()
         .nth(1)
         .expect("run with parameter server or client");
@@ -24,7 +25,7 @@ fn main() -> Result<(), anyhow::Error> {
             println!("received {:?}", res);
         },
         _ => {
-            bail!("Parameter needs to be server or client")
+            panic!("Parameter needs to be server or client");
         },
     }
     Ok(())
