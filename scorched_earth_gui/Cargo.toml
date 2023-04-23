@@ -1,0 +1,27 @@
+[package]
+name = "scorched_earth_gui"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["lib", "cdylib"]
+name = "scorched_earth_gui_lib"
+path = "src/lib.rs"
+
+[[bin]]
+name = "scorched_earth_gui_bin"
+path = "src/main.rs"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+eframe = "0.21.3"
+winit = "0.28.3"
+
+[target.'cfg(android)'.dependencies]
+android-activity = "0.4.1"
+
+[package.metadata.android]
+package = "com.foobarbaz.scorchedearth"
+build_targets = ["aarch64-linux-android"]
+apk_name = "scorchedearth"

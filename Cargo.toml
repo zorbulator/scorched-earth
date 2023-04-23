@@ -2,6 +2,7 @@
 
 members = [
   "scorched_earth_tui",
+  "scorched_earth_gui",
   "scorched_earth_core",
   "scorched_earth_network",
   "serpd",
