@@ -21,6 +21,17 @@ winit = "0.28.3"
 [target.'cfg(android)'.dependencies]
 android-activity = "0.4.1"
 
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+console_error_panic_hook = "0.1.6"
+wasm-bindgen-futures = "0.4"
+
+[profile.release]
+opt-level = 2 # fast and small wasm
+
+# Optimize all dependencies even in debug builds:
+[profile.dev.package."*"]
+opt-level = 2
+
 [package.metadata.android]
 package = "com.foobarbaz.scorchedearth"
 build_targets = ["aarch64-linux-android"]
