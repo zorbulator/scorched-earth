@@ -6,4 +6,5 @@ pub fn render(state: &mut State, ui: &mut egui::Ui) {
     if ui.button("back").clicked() {
         state.screen = Screen::Title;
     }
+    
 }

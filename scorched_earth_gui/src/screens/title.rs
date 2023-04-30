@@ -13,3 +13,4 @@ pub fn render(state: &mut State, ui: &mut egui::Ui) {
         state.screen = Screen::Join;
     }
 }
+
