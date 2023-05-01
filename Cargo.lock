@@ -2229,6 +2229,8 @@ dependencies = [
  "android-activity",
  "console_error_panic_hook",
  "eframe",
+ "scorched_earth_core",
+ "scorched_earth_network",
  "wasm-bindgen-futures",
  "winit",
 ]

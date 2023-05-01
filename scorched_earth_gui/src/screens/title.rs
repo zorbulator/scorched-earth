@@ -1,16 +1,27 @@
 use crate::{State, Screen};
-use eframe::egui;
+use eframe::{egui::{self, RichText, FontId}, epaint::{Color32, Vec2}};
 
 pub fn render(state: &mut State, ui: &mut egui::Ui) {
-    ui.heading("Scorched Earth");
-    if ui.button("rules").clicked() {
-        state.screen = Screen::Rules;
-    }
-    if ui.button("host").clicked() {
-        state.screen = Screen::Host;
-    }
-    if ui.button("join").clicked() {
-        state.screen = Screen::Join;
-    }
+
+    let host_button = egui::widgets::Button::new(RichText::new("Host Game").color(Color32::WHITE)).min_size(Vec2 { x: 100.0, y: 50.0 });
+    let join_button = egui::widgets::Button::new(RichText::new("Join Game").color(Color32::WHITE)).min_size(Vec2 { x: 100.0, y: 50.0 });
+    let rules_button = egui::widgets::Button::new(RichText::new("Rules").color(Color32::WHITE)).min_size(Vec2 { x: 100.0, y: 50.0 });
+
+    ui.vertical_centered(|ui| {
+        ui.heading(RichText::new("Scorched Earth").color(Color32::DARK_RED).font(FontId::proportional(40.0)));
+        ui.add_space(20.0);
+
+        if ui.add(host_button).clicked() {
+            state.screen = Screen::Host;
+        }
+        ui.add_space(10.0);
+        if ui.add(join_button).clicked() {
+            state.screen = Screen::Rules;
+        }
+        ui.add_space(10.0);
+        if ui.add(rules_button).clicked() {
+            state.screen = Screen::Join;
+        }
+    });
 }
 
