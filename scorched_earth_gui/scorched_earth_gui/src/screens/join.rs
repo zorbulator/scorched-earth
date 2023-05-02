@@ -1,6 +1,5 @@
 use crate::Screen;
 use eframe::egui;
-use tracing::info;
 
 pub fn render(screen: &mut Screen, ui: &mut egui::Ui) {
     ui.heading("joining room...");
@@ -8,12 +7,10 @@ pub fn render(screen: &mut Screen, ui: &mut egui::Ui) {
         if let Ok(res) = rx.try_recv() {
             match res {
                 Ok((conn, board)) => {
-                    info!("conn succeeded");
                     *screen = Screen::Game { conn, board };
                 }
                 Err(e) => {
-                    info!("conn failed: {}", e);
-                    *screen = Default::default();
+                    *screen = Screen::Error(e.to_string());
                 }
             }
         }

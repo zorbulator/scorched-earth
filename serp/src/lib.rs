@@ -50,7 +50,9 @@ pub fn host<A: ToSocketAddrs>(addr: A, id: &str) -> Result<TcpStream, SerpError>
 }
 
 pub fn conn<A: ToSocketAddrs>(addr: A, id: &str) -> Result<TcpStream, SerpError> {
-    let mut stream = TcpStream::connect(addr)?;
+    tracing::info!("connecting...");
+    let mut stream = TcpStream::connect_timeout(&addr.to_socket_addrs()?.next().unwrap(), Duration::from_secs(15))?;
+    tracing::info!("connected");
     stream.write(b"conn ")?;
     stream.write(id.as_bytes())?;
     stream.write(b"\n")?;

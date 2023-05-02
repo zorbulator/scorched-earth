@@ -7,7 +7,7 @@ use crossterm::{
     style::{Color, SetBackgroundColor},
     terminal::{disable_raw_mode, enable_raw_mode},
 };
-use rand::{distributions::Alphanumeric, thread_rng, Rng};
+use rand::{distributions::{Alphanumeric, Uniform}, thread_rng, Rng};
 use scorched_earth_network::{Connection, MoveMessage};
 
 use std::{
@@ -375,7 +375,7 @@ fn run_host(addr: &str) -> Result<()> {
     board.turn = if rng.gen_bool(0.5) { 1 } else { 0 };
     let mut secret = [0u8; 32];
     for b in &mut secret {
-        *b = rng.sample(Alphanumeric);
+        *b = rng.sample(Uniform::new_inclusive(b'0', b'9'));
     }
     let secret_string = String::from_utf8_lossy(&secret);
     println!("Hosting game with id: {}", secret_string);
