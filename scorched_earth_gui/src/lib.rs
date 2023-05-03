@@ -1,16 +1,15 @@
-use std::sync::mpsc::Receiver;
+use std::{sync::{mpsc::Receiver, Mutex, Arc}, time::Duration};
 
 #[cfg(target_os = "android")]
 use android_activity::{AndroidApp, WindowManagerFlags};
 use eframe::{egui, epaint::FontId};
-use scorched_earth_core::Board;
-use scorched_earth_network::Connection;
+use scorched_earth_core::{Board, Move};
+use scorched_earth_network::{Connection, MoveMessage};
 mod screens;
 
 #[no_mangle]
 #[cfg(target_os = "android")]
 pub fn android_main(app: AndroidApp) -> Result<(), eframe::Error> {
-    use android_activity::AndroidApp;
     let mut options: eframe::NativeOptions = Default::default();
 
     use winit::platform::android::EventLoopBuilderExtAndroid;
@@ -28,18 +27,27 @@ pub fn android_main(app: AndroidApp) -> Result<(), eframe::Error> {
     eframe::run_native(
         "Scorched Earth",
         options,
-        Box::new(|_| {
-            Box::new(State::default())
-        }),
+        Box::new(|_| Box::new(State::default())),
     )
 }
 
 pub enum Screen {
-    Title { joinid: String },
+    Title {
+        joinid: String,
+    },
     Rules,
-    Host,
+    Host {
+        joinid: String,
+        board: Board,
+        rx: Receiver<Result<Connection, scorched_earth_network::Error>>,
+    },
     Join(Receiver<Result<(Connection, Board), scorched_earth_network::Error>>),
-    Game { conn: Connection, board: Board },
+    Game {
+        conn: Arc<Mutex<Connection>>,
+        board: Board,
+        preview_move: Option<Move>,
+        rx: Option<Receiver<Result<MoveMessage, scorched_earth_network::Error>>>,
+    },
     Error(String),
 }
 
@@ -63,16 +71,18 @@ impl eframe::App for State {
                 screens::title::render(self, ui);
                 if ui.button("resize").clicked() {
                     let mut style = (*ctx.style()).clone();
-                    style.text_styles = [
-                        (egui::TextStyle::Button, FontId::new(30.0, egui::FontFamily::Proportional)),
-                    ].into();
+                    style.text_styles = [(
+                        egui::TextStyle::Button,
+                        FontId::new(30.0, egui::FontFamily::Proportional),
+                    )]
+                    .into();
                     ctx.set_style(style);
                 }
             }
             Screen::Rules => {
                 screens::rules::render(&mut self.screen, ui);
             }
-            Screen::Host => {
+            Screen::Host { .. } => {
                 screens::host::render(&mut self.screen, ui);
             }
             Screen::Join(_) => {
@@ -85,5 +95,6 @@ impl eframe::App for State {
                 screens::error::render(&mut self.screen, ui);
             }
         });
+        ctx.request_repaint_after(Duration::from_millis(100));
     }
 }

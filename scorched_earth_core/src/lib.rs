@@ -80,7 +80,7 @@ impl Direction {
     }
 }
 
-#[derive(Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Copy, Serialize, Deserialize, PartialEq, std::fmt::Debug)]
 pub enum PlayerColor {
     Blue,
     Cyan,

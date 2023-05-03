@@ -1967,6 +1967,7 @@ version = "0.1.0"
 dependencies = [
  "android-activity",
  "eframe",
+ "rand",
  "scorched_earth_core",
  "scorched_earth_network",
  "winit",
