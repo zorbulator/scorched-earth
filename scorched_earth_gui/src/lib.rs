@@ -35,9 +35,10 @@ pub fn android_main(app: AndroidApp) -> Result<(), eframe::Error> {
 }
 
 pub enum Screen {
-    Title { joinid: String },
+    Title,
     Rules,
     Host,
+    Input { joinid: String }, 
     Join(Receiver<Result<(Connection, Board), scorched_earth_network::Error>>),
     Game { conn: Connection, board: Board },
     Error(String),
@@ -45,9 +46,7 @@ pub enum Screen {
 
 impl Default for Screen {
     fn default() -> Self {
-        Screen::Title {
-            joinid: String::new(),
-        }
+        Screen::Title 
     }
 }
 
@@ -59,15 +58,8 @@ pub struct State {
 impl eframe::App for State {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| match self.screen {
-            Screen::Title { .. } => {
+            Screen::Title => {
                 screens::title::render(self, ui);
-                if ui.button("resize").clicked() {
-                    let mut style = (*ctx.style()).clone();
-                    style.text_styles = [
-                        (egui::TextStyle::Button, FontId::new(30.0, egui::FontFamily::Proportional)),
-                    ].into();
-                    ctx.set_style(style);
-                }
             }
             Screen::Rules => {
                 screens::rules::render(&mut self.screen, ui);
@@ -77,6 +69,9 @@ impl eframe::App for State {
             }
             Screen::Join(_) => {
                 screens::join::render(&mut self.screen, ui);
+            }
+            Screen::Input { .. } => {
+                screens::input::render(&mut self.screen, ui);
             }
             Screen::Game { .. } => {
                 screens::game::render(&mut self.screen, ui);

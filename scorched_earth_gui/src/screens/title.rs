@@ -1,42 +1,46 @@
-use scorched_earth_network::Connection;
-use std::sync::mpsc::channel;
-
 use crate::{Screen, State};
-use eframe::egui;
+use eframe::{egui::{self, RichText, FontId}, epaint::{Color32, Vec2}};
 
 pub fn render(state: &mut State, ui: &mut egui::Ui) {
-    ui.label("-");
-    ui.label("-");
-    ui.label("-");
-    ui.heading("Scorched Earth");
-    if ui.button("rules").clicked() {
-        state.screen = Screen::Rules;
-    }
-    if ui.button("host").clicked() {
-        state.screen = Screen::Host;
-    }
-
-    ui.separator();
-
-    if let Screen::Title { joinid } = &mut state.screen {
-        ui.text_edit_singleline(joinid);
-        for i in '0'..='9' {
-            if ui.button(i.to_string()).clicked() {
-                joinid.push(i);
-            }
+    let host_button = egui::widgets::Button::new(RichText::new("Host Game")
+        .size(30.0)
+        .color(Color32::WHITE))
+        .min_size(Vec2 { x: 300.0, y: 50.0 });
+    let join_button = egui::widgets::Button::new(RichText::new("Join Game")
+        .size(30.0)
+        .color(Color32::WHITE))
+        .min_size(Vec2 { x: 300.0, y: 50.0 });
+    let rules_button = egui::widgets::Button::new(RichText::new("Rules")
+        .size(30.0)
+        .color(Color32::WHITE))
+        .min_size(Vec2 { x: 300.0, y: 50.0 });
+    
+    let svg_image = egui_extras::RetainedImage::from_svg_bytes_with_size(
+        "flame-colored.svg",
+        include_bytes!("../assets/flame-colored.svg"),
+        egui_extras::image::FitTo::Original,
+        )
+    .unwrap();
+    ui.vertical_centered(|ui| {
+        ui.add_space(30.0);
+        ui.heading(RichText::new("Scorched Earth")
+            .color(Color32::WHITE)
+            .font(FontId::proportional(40.0))
+            .size(50.0)
+        );
+        ui.add_space(10.0);
+        svg_image.show_size(ui, Vec2 { x: 300.0, y: 300.0 });
+        ui.add_space(50.0);
+        if ui.add(host_button).clicked() {
+            state.screen = Screen::Host;
         }
-        if ui.button("clear").clicked() {
-            joinid.clear();
+        ui.add_space(30.0);
+        if ui.add(join_button).clicked() {
+            state.screen = Screen::Input { joinid: String::new() };
         }
-        if ui.button("back").clicked() {
-            joinid.pop();
+        ui.add_space(30.0);
+        if ui.add(rules_button).clicked() {
+            state.screen = Screen::Rules;
         }
-        if ui.button("join").clicked() {
-            let (tx, rx) = channel();
-            let joinid2 = joinid.clone();
-            tx.send(Connection::conn("169.231.11.248:8080", joinid2.as_bytes()))
-                .unwrap();
-            state.screen = Screen::Join(rx);
-        }
-    }
+    });
 }
