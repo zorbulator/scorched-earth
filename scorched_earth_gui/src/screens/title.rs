@@ -1,4 +1,4 @@
-use std::{sync::mpsc::{channel, Receiver}, thread};
+use std::{sync::mpsc::channel, thread};
 
 use rand::{thread_rng, Rng, distributions::Uniform};
 use scorched_earth_core::Board;
@@ -36,9 +36,13 @@ pub fn render(state: &mut State, ui: &mut egui::Ui) {
             .font(FontId::proportional(40.0))
             .size(50.0)
         );
+
         ui.add_space(10.0);
+
         svg_image.show_size(ui, Vec2 { x: 300.0, y: 300.0 });
+
         ui.add_space(50.0);
+
         if ui.add(host_button).clicked() {
             let mut board = Board::default();
             let mut rng = thread_rng();
@@ -55,11 +59,15 @@ pub fn render(state: &mut State, ui: &mut egui::Ui) {
             });
             state.screen = Screen::Host { joinid: secret_string.to_string(), board, rx };
         }
+
         ui.add_space(30.0);
+
         if ui.add(join_button).clicked() {
             state.screen = Screen::Input { joinid: String::new() };
         }
+
         ui.add_space(30.0);
+
         if ui.add(rules_button).clicked() {
             state.screen = Screen::Rules;
         }

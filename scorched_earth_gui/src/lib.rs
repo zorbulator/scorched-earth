@@ -2,7 +2,7 @@ use std::{sync::{mpsc::Receiver, Mutex, Arc}, time::Duration};
 
 #[cfg(target_os = "android")]
 use android_activity::{AndroidApp, WindowManagerFlags};
-use eframe::{egui, epaint::FontId};
+use eframe::egui;
 use scorched_earth_core::{Board, Move};
 use scorched_earth_network::{Connection, MoveMessage};
 mod screens;
