@@ -26,7 +26,6 @@ pub fn render(state: &mut State, ui: &mut egui::Ui) {
         ui.add_space(30.0);
         ui.heading(RichText::new("Scorched Earth")
             .color(Color32::WHITE)
-            // .color(Color32::from_rgb(173, 39, 12))
             .font(FontId::proportional(40.0))
             .size(50.0)
         );

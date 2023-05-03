@@ -20,11 +20,11 @@ fn android_main(app: AndroidApp) -> Result<(), eframe::Error> {
     )
 }
 
-enum Screen {
+pub enum Screen {
     Title,
     Rules,
     Host,
-    Join,
+    Join { joinid: String },
     Game,
 }
 
@@ -51,7 +51,7 @@ impl eframe::App for State {
             Screen::Host => {
                 screens::host::render(self, ui);
             }
-            Screen::Join => {
+            Screen::Join { .. }=> {
                 screens::join::render(self, ui);
             }
             Screen::Game => {
