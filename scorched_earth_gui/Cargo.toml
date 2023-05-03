@@ -20,6 +20,8 @@ winit = "0.28.3"
 # getrandom = { version = "0.2", features = ["js"] }
 scorched_earth_core = { path = "../scorched_earth_core" }
 scorched_earth_network = { path = "../scorched_earth_network" }
+egui_extras = { version = "0.21.0", features = ["svg"] }
+image = { version = "0.24", features = ["png", "jpeg"] }
 rand = "0.8.5"
 # tracing = "0.1.37"
 
