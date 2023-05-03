@@ -19,6 +19,9 @@ eframe = "0.21.3"
 winit = "0.28.3"
 scorched_earth_core = { path = "../scorched_earth_core" }
 scorched_earth_network = { path = "../scorched_earth_network" }
+egui_extras = { version = "0.21.0", features = ["svg"] }
+image = { version = "0.24", features = ["png", "jpeg"] }
+
 
 [target.'cfg(android)'.dependencies]
 android-activity = "0.4.1"
