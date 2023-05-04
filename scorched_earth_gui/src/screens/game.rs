@@ -1,6 +1,6 @@
 use std::{sync::mpsc::channel, thread};
 
-use crate::Screen;
+use crate::{Screen, convert_color};
 use eframe::{
     egui,
     epaint::{Color32, Rect, Rounding},
@@ -13,7 +13,7 @@ fn draw_board(ui: &mut egui::Ui, board: &Board, preview_move: &Option<Move>, i: 
     let width = (ui.available_width()) as usize / 11 * 11;
     //let desired_size = egui::vec2(11f32 * 30f32, 11f32 * 30f32);
     let desired_size = egui::vec2(width as f32, width as f32);
-    
+
     let (rect, _response) =
         ui.allocate_exact_size(desired_size, egui::Sense::focusable_noninteractive());
 
@@ -28,13 +28,7 @@ fn draw_board(ui: &mut egui::Ui, board: &Board, preview_move: &Option<Move>, i: 
                     let color = match tile {
                         TileContents::Empty => Color32::BLACK,
                         TileContents::Scorched => Color32::RED,
-                        TileContents::Player(p) => match p {
-                            PlayerColor::Blue => Color32::BLUE,
-                            PlayerColor::Cyan => Color32::LIGHT_BLUE,
-                            PlayerColor::Green => Color32::GREEN,
-                            PlayerColor::Yellow => Color32::YELLOW,
-                            PlayerColor::Magenta => Color32::DARK_BLUE,
-                        },
+                        TileContents::Player(p) => convert_color(p),
                     };
 
                     let corner = rect.left_top() + egui::vec2(i as f32 * w, j as f32 * w);
@@ -83,6 +77,7 @@ pub fn render(screen: &mut Screen, ui: &mut egui::Ui) {
     ui.heading("-");
     ui.heading("Game");
     let mut error_message: Option<String> = None;
+    let mut won: Option<(bool, PlayerColor)> = None;
     if let Screen::Game {
         conn,
         board,
@@ -116,7 +111,8 @@ pub fn render(screen: &mut Screen, ui: &mut egui::Ui) {
                                     Some(String::from("Other player's board doesn't match!"));
                             }
                             if let Some(color) = res.winner {
-                                error_message = Some(format!("{:?} won!", color));
+                                let lost = color == board.players[conn_player].color;
+                                won = Some((!lost, color));
                             }
                         }
                         Err(e) => {
@@ -145,7 +141,8 @@ pub fn render(screen: &mut Screen, ui: &mut egui::Ui) {
                     if board.is_move_valid(i, *m) {
                         let res = board.make_move(i, *m);
                         if let Some(color) = res.winner {
-                            error_message = Some(format!("{:?} won!", color));
+                            let lost = color == board.players[conn_player].color;
+                            won = Some((!lost, color));
                         }
                         match conn.lock().unwrap().send_move(MoveMessage {
                             new_board: board.clone(),
@@ -184,8 +181,11 @@ pub fn render(screen: &mut Screen, ui: &mut egui::Ui) {
         *screen = Screen::Error(e);
     }
 
+    if let Some((won, color)) = won {
+        *screen = Screen::End { won, color };
+    }
+
     if ui.button("back").clicked() {
         *screen = Default::default();
     }
-
 }
