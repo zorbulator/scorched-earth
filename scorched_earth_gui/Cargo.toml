@@ -35,7 +35,7 @@ android-activity = "0.4.1"
 
 [package.metadata.android]
 package = "com.foobarbaz.scorchedearth"
-build_targets = ["aarch64-linux-android"]
+build_targets = ["aarch64-linux-android", "armv7-linux-androideabi"]
 apk_name = "scorched_earth"
 
 [package.metadata.android.application.activity]

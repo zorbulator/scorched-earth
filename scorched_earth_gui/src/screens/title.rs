@@ -24,12 +24,12 @@ pub fn render(state: &mut State, ui: &mut egui::Ui) {
         .color(Color32::WHITE))
         .min_size(Vec2 { x: 300.0, y: 50.0 });
     
-    /*let svg_image = egui_extras::RetainedImage::from_svg_bytes_with_size(
-        "flame-colored.svg",
-        include_bytes!("../assets/flame-colored.svg"),
+    let svg_image = egui_extras::RetainedImage::from_svg_bytes_with_size(
+        "fire-zone.svg",
+        include_bytes!("../assets/fire-zone.svg"),
         egui_extras::image::FitTo::Original,
         )
-    .unwrap();*/
+    .unwrap();
     ui.vertical_centered(|ui| {
         ui.add_space(30.0);
         ui.heading(RichText::new("Scorched Earth")
@@ -40,7 +40,7 @@ pub fn render(state: &mut State, ui: &mut egui::Ui) {
 
         ui.add_space(10.0);
 
-        //svg_image.show_size(ui, Vec2 { x: 300.0, y: 300.0 });
+        svg_image.show_size(ui, Vec2 { x: 250.0, y: 250.0 });
 
         ui.add_space(50.0);
 
