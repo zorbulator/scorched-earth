@@ -8,6 +8,9 @@ const ADDR: &str = "169.231.11.248:8080";
 
 pub fn render(screen: &mut Screen, ui: &mut egui::Ui) {
     // only set if join is clicked
+    if ui.button("back").clicked() {
+        *screen = Default::default();
+    }
     let mut join_rx: Option<Receiver<_>> = None;
 
     if let Screen::Input { joinid } = screen {
