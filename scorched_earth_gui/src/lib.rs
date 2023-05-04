@@ -1,9 +1,12 @@
-use std::{sync::{mpsc::Receiver, Mutex, Arc}, time::Duration};
+use std::{
+    sync::{mpsc::Receiver, Arc, Mutex},
+    time::Duration,
+};
 
 #[cfg(target_os = "android")]
 use android_activity::{AndroidApp, WindowManagerFlags};
-use eframe::egui;
-use scorched_earth_core::{Board, Move};
+use eframe::{egui, epaint::Color32};
+use scorched_earth_core::{Board, Move, PlayerColor};
 use scorched_earth_network::{Connection, MoveMessage};
 mod screens;
 
@@ -31,6 +34,16 @@ pub fn android_main(app: AndroidApp) -> Result<(), eframe::Error> {
     )
 }
 
+pub fn convert_color(p: PlayerColor) -> Color32 {
+    match p {
+        PlayerColor::Blue => Color32::BLUE,
+        PlayerColor::Cyan => Color32::LIGHT_BLUE,
+        PlayerColor::Green => Color32::GREEN,
+        PlayerColor::Yellow => Color32::YELLOW,
+        PlayerColor::Magenta => Color32::DARK_BLUE,
+    }
+}
+
 pub enum Screen {
     Title,
     Rules,
@@ -39,7 +52,9 @@ pub enum Screen {
         board: Board,
         rx: Receiver<Result<Connection, scorched_earth_network::Error>>,
     },
-    Input { joinid: String },
+    Input {
+        joinid: String,
+    },
     Join(Receiver<Result<(Connection, Board), scorched_earth_network::Error>>),
     Game {
         conn: Arc<Mutex<Connection>>,
@@ -49,6 +64,10 @@ pub enum Screen {
         conn_player: usize,
     },
     Error(String),
+    End {
+        won: bool,
+        color: PlayerColor,
+    },
 }
 
 impl Default for Screen {
@@ -74,9 +93,7 @@ impl eframe::App for State {
             Screen::Host { .. } => {
                 screens::host::render(&mut self.screen, ui);
             }
-            Screen::Input { .. } => {
-                screens::input::render(&mut self.screen, ui)
-            }
+            Screen::Input { .. } => screens::input::render(&mut self.screen, ui),
             Screen::Join(_) => {
                 screens::join::render(&mut self.screen, ui);
             }
@@ -85,6 +102,9 @@ impl eframe::App for State {
             }
             Screen::Error(_) => {
                 screens::error::render(&mut self.screen, ui);
+            }
+            Screen::End { .. } => {
+                screens::end::render(&mut self.screen, ui);
             }
         });
         ctx.request_repaint_after(Duration::from_millis(100));

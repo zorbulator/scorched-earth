@@ -5,3 +5,4 @@ pub mod join;
 pub mod input;
 pub mod game;
 pub mod error;
+pub mod end;
