@@ -38,8 +38,8 @@ pub fn convert_color(p: PlayerColor) -> Color32 {
     match p {
         PlayerColor::Blue => Color32::BLUE,
         PlayerColor::Cyan => Color32::LIGHT_BLUE,
-        PlayerColor::Green => Color32::GREEN,
-        PlayerColor::Yellow => Color32::YELLOW,
+        PlayerColor::Green => Color32::from_rgb(143, 216, 97),
+        PlayerColor::Yellow => Color32::from_rgb(246, 167, 55),
         PlayerColor::Magenta => Color32::DARK_BLUE,
     }
 }
