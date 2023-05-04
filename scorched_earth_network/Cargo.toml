@@ -11,5 +11,6 @@ rust-argon2 = "1.0.0"
 scorched_earth_core = { version = "0.1.0", path = "../scorched_earth_core" }
 serde = { version = "1.0.152", features = ["derive"] }
 serp = { version = "0.1.0", path = "../serp" }
+sha2 = "0.10.6"
 snow = "0.9.1"
 thiserror = "1.0.38"

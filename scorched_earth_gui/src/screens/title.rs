@@ -8,6 +8,7 @@ use crate::{Screen, State};
 use eframe::{egui::{self, RichText, FontId}, epaint::{Color32, Vec2}};
 
 const ADDR: &str = "169.231.11.248:8080";
+const SECRET_LEN: usize = 6;
 
 pub fn render(state: &mut State, ui: &mut egui::Ui) {
     let host_button = egui::widgets::Button::new(RichText::new("Host Game")
@@ -47,7 +48,7 @@ pub fn render(state: &mut State, ui: &mut egui::Ui) {
             let mut board = Board::default();
             let mut rng = thread_rng();
             board.turn = if rng.gen_bool(0.5) { 1 } else { 0 };
-            let mut secret = [0u8; 32];
+            let mut secret = [0u8; SECRET_LEN];
             for b in &mut secret {
                 *b = rng.sample(Uniform::new_inclusive(b'0', b'9'));
             }

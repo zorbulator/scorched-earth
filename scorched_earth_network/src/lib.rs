@@ -7,6 +7,7 @@ use rmp_serde::{to_vec, from_slice};
 use scorched_earth_core::{Board, Move};
 use serde::{Serialize, Deserialize};
 use serp::SerpError;
+use sha2::Digest;
 use snow::{Builder, TransportState};
 use thiserror::Error;
 
@@ -56,6 +57,10 @@ impl Connection {
     }
 
     pub fn host<A: ToSocketAddrs>(addr: A, secret: &[u8], board: &Board) -> Result<Self, Error> {
+        let mut hasher = sha2::Sha256::new();
+        hasher.update(secret);
+        let secret = &hasher.finalize()[..32];
+
         let mut buf = vec![0u8; 65535];
 
         let builder = Builder::new(PARAMS.parse()?);
@@ -96,6 +101,10 @@ impl Connection {
     }
 
     pub fn conn<A: ToSocketAddrs>(addr: A, secret: &[u8]) -> Result<(Self, Board), Error> {
+        let mut hasher = sha2::Sha256::new();
+        hasher.update(secret);
+        let secret = &hasher.finalize()[..32];
+
         let mut buf = vec![0u8; 65535];
 
         let builder = Builder::new(PARAMS.parse()?);

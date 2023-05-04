@@ -2327,6 +2327,7 @@ dependencies = [
  "scorched_earth_core",
  "serde",
  "serp",
+ "sha2",
  "snow",
  "thiserror",
 ]

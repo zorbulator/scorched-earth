@@ -7,7 +7,7 @@ use crossterm::{
     style::{Color, SetBackgroundColor},
     terminal::{disable_raw_mode, enable_raw_mode},
 };
-use rand::{distributions::{Alphanumeric, Uniform}, thread_rng, Rng};
+use rand::{distributions::Uniform, thread_rng, Rng};
 use scorched_earth_network::{Connection, MoveMessage};
 
 use std::{
@@ -17,6 +17,8 @@ use std::{
 };
 
 use scorched_earth_core::{Board, Direction, Move, PlayerColor, TileContents, Vector, BOARD_SIZE};
+
+const SECRET_LEN: usize = 6;
 
 #[derive(Debug, Parser)]
 #[command(name = "scorched_earth_tui")]
@@ -373,7 +375,7 @@ fn run_host(addr: &str) -> Result<()> {
     let mut board = Board::default();
     let mut rng = thread_rng();
     board.turn = if rng.gen_bool(0.5) { 1 } else { 0 };
-    let mut secret = [0u8; 32];
+    let mut secret = [0u8; SECRET_LEN];
     for b in &mut secret {
         *b = rng.sample(Uniform::new_inclusive(b'0', b'9'));
     }
