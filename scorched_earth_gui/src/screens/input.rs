@@ -7,6 +7,9 @@ use eframe::{egui::{self, RichText, FontId}, epaint::{Color32, Vec2}};
 const ADDR: &str = "169.231.11.248:8080";
 
 pub fn render(screen: &mut Screen, ui: &mut egui::Ui) {
+    // only set if join is clicked
+    let mut join_rx: Option<Receiver<_>> = None;
+
     if let Screen::Input { joinid } = screen {
         ui.vertical_centered(|ui| {
             ui.add_space(30.0);
@@ -85,16 +88,17 @@ pub fn render(screen: &mut Screen, ui: &mut egui::Ui) {
 
         ui.vertical_centered(|ui| {
             if ui.add(join_button).clicked() {
-                // only set if join is clicked
-                let mut join_rx: Option<Receiver<_>> = None;
                 let (tx, rx) = channel();
                 let joinid2 = joinid.clone();
                 thread::spawn(move || {
                     tx.send(Connection::conn(ADDR, joinid2.as_bytes())).unwrap();
                 });
-                // *screen = Screen::Join(rx);
                 join_rx = Some(rx);
             }
         });
+    }
+
+    if let Some(rx) = join_rx {
+        *screen = Screen::Join(rx);
     }
 }
