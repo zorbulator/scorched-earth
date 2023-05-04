@@ -2,8 +2,8 @@ use std::{sync::mpsc::channel, thread};
 
 use crate::Screen;
 use eframe::{
-    egui,
-    epaint::{Color32, Rect, Rounding},
+    egui::{self, RichText},
+    epaint::{Color32, Rect, Rounding, Vec2},
 };
 use scorched_earth_core::{Board, Direction, Move, PlayerColor, TileContents, Vector, BOARD_SIZE};
 use scorched_earth_network::MoveMessage;
@@ -32,7 +32,7 @@ fn draw_board(ui: &mut egui::Ui, board: &Board, preview_move: &Option<Move>, i: 
                             PlayerColor::Blue => Color32::BLUE,
                             PlayerColor::Cyan => Color32::LIGHT_BLUE,
                             PlayerColor::Green => Color32::GREEN,
-                            PlayerColor::Yellow => Color32::YELLOW,
+                            PlayerColor::Yellow => Color32::from_rgb(246, 167, 55), //Color32::YELLOW
                             PlayerColor::Magenta => Color32::DARK_BLUE,
                         },
                     };
@@ -42,7 +42,7 @@ fn draw_board(ui: &mut egui::Ui, board: &Board, preview_move: &Option<Move>, i: 
                         Rect {
                             min: corner,
                             max: corner + egui::vec2(w, w),
-                        },
+        },
                         Rounding::none(),
                         color,
                     );
@@ -78,10 +78,10 @@ fn draw_board(ui: &mut egui::Ui, board: &Board, preview_move: &Option<Move>, i: 
 }
 
 pub fn render(screen: &mut Screen, ui: &mut egui::Ui) {
-    ui.heading("-");
-    ui.heading("-");
-    ui.heading("-");
-    ui.heading("Game");
+    if ui.button("back").clicked() {
+        *screen = Default::default();
+    }
+    ui.add_space(30.0);
     let mut error_message: Option<String> = None;
     if let Screen::Game {
         conn,
@@ -93,6 +93,10 @@ pub fn render(screen: &mut Screen, ui: &mut egui::Ui) {
     {
         let i = board.turn;
         let conn_player = *conn_player;
+        ui.vertical_centered(|ui| {
+            draw_board(ui, board, preview_move, i);
+            ui.add_space(50.0);
+        });
 
         // it's the online player's turn
         if conn_player == i {
@@ -128,38 +132,115 @@ pub fn render(screen: &mut Screen, ui: &mut egui::Ui) {
             }
         } else {
             let mut input: Option<Direction> = None;
-            if ui.button("left").clicked() {
-                input = Some(Direction::Left);
-            }
-            if ui.button("right").clicked() {
-                input = Some(Direction::Right);
-            }
-            if ui.button("up").clicked() {
-                input = Some(Direction::Up);
-            }
-            if ui.button("down").clicked() {
-                input = Some(Direction::Down);
-            }
-            if ui.button("done").clicked() {
-                if let Some(m) = preview_move {
-                    if board.is_move_valid(i, *m) {
-                        let res = board.make_move(i, *m);
-                        if let Some(color) = res.winner {
-                            error_message = Some(format!("{:?} won!", color));
-                        }
-                        match conn.lock().unwrap().send_move(MoveMessage {
-                            new_board: board.clone(),
-                            new_move: *m,
-                            player: i,
-                        }) {
-                            Err(e) => error_message = Some(e.to_string()),
-                            _ => {}
-                        }
-                        *preview_move = None;
-                    }
-                }
-            }
 
+            let left_button = egui::widgets::Button::new(RichText::new("left")
+                .size(10.0)
+                .color(Color32::WHITE));
+                
+            let right_button = egui::widgets::Button::new(RichText::new("right")
+                .size(10.0)
+                .color(Color32::WHITE));
+                
+            let down_button = egui::widgets::Button::new(RichText::new("down")
+                .size(10.0)
+                .color(Color32::WHITE));
+                
+            let up_button = egui::widgets::Button::new(RichText::new("up")
+                .size(10.0)
+                .color(Color32::WHITE));
+                
+            let done_button = egui::widgets::Button::new(RichText::new("done")
+                .size(10.0)
+                .color(Color32::WHITE));
+                
+            let row_length = ui.available_width() * 0.8;
+            ui.vertical_centered(|ui| {
+                ui.allocate_ui(Vec2 { x: row_length, y: 50.0}, |ui| {
+                    ui.columns(3, |columns| {
+                        columns[1].vertical_centered(|ui| {
+                            if ui.add_sized(ui.available_size(), up_button).clicked() {
+                                input = Some(Direction::Up);
+                            }
+                        })
+                    });
+                });      
+
+                ui.allocate_ui(Vec2 { x: row_length, y: 50.0}, |ui| {
+                    ui.columns(3, |columns| {
+                        columns[0].vertical_centered(|ui| {
+                            if ui.add_sized(ui.available_size(), left_button).clicked() {
+                                input = Some(Direction::Left);
+                            }
+                        });
+                        columns[1].vertical_centered(|ui| {
+                            if ui.add_sized(ui.available_size(), done_button).clicked() {
+                                if let Some(m) = preview_move {
+                                    if board.is_move_valid(i, *m) {
+                                        let res = board.make_move(i, *m);
+                                        if let Some(color) = res.winner {
+                                            error_message = Some(format!("{:?} won!", color));
+                                        }
+                                        match conn.lock().unwrap().send_move(MoveMessage {
+                                            new_board: board.clone(),
+                                            new_move: *m,
+                                            player: i,
+                                        }) {
+                                            Err(e) => error_message = Some(e.to_string()),
+                                            _ => {}
+                                        }
+                                        *preview_move = None;
+                                    }
+                                }
+                            }
+                        });
+                        columns[2].vertical_centered(|ui| {
+                            if ui.add_sized(ui.available_size(), right_button).clicked() {
+                                input = Some(Direction::Right);
+                            }
+                        });
+                    });
+                }); 
+                ui.allocate_ui(Vec2 { x: row_length, y: 50.0}, |ui| {
+                    ui.columns(3, |columns| {
+                        columns[1].vertical_centered(|ui| {
+                            if ui.add_sized(ui.available_size(), down_button).clicked() {
+                                input = Some(Direction::Down);
+                            }
+                        })
+                    });
+                });      
+            });
+            // if ui.button("left").clicked() {
+            //     input = Some(Direction::Left);
+            // }
+            // if ui.button("right").clicked() {
+            //     input = Some(Direction::Right);
+            // }
+            // if ui.button("up").clicked() {
+            //     input = Some(Direction::Up);
+            // }
+            // if ui.button("down").clicked() {
+            //     input = Some(Direction::Down);
+            // }
+            // if ui.button("done").clicked() {
+            //     if let Some(m) = preview_move {
+            //         if board.is_move_valid(i, *m) {
+            //             let res = board.make_move(i, *m);
+            //             if let Some(color) = res.winner {
+            //                 error_message = Some(format!("{:?} won!", color));
+            //             }
+            //             match conn.lock().unwrap().send_move(MoveMessage {
+            //                 new_board: board.clone(),
+            //                 new_move: *m,
+            //                 player: i,
+            //             }) {
+            //                 Err(e) => error_message = Some(e.to_string()),
+            //                 _ => {}
+            //             }
+            //             *preview_move = None;
+            //         }
+            //     }
+            // }
             if let Some(dir) = input {
                 match preview_move {
                     None => {
@@ -178,14 +259,8 @@ pub fn render(screen: &mut Screen, ui: &mut egui::Ui) {
                 }
             }
         }
-        draw_board(ui, board, preview_move, i);
     }
     if let Some(e) = error_message {
         *screen = Screen::Error(e);
     }
-
-    if ui.button("back").clicked() {
-        *screen = Default::default();
-    }
-
 }

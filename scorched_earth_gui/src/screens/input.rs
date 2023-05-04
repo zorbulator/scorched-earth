@@ -2,7 +2,7 @@ use std::{sync::mpsc::{channel, Receiver}, thread};
 use scorched_earth_network::Connection;
 
 use crate::Screen;
-use eframe::{egui::{self, RichText, FontId}, epaint::{Color32, Vec2}};
+use eframe::{egui::{self, RichText, FontId, Button}, epaint::{Color32, Vec2}};
 
 const ADDR: &str = "169.231.11.248:8080";
 
@@ -27,77 +27,74 @@ pub fn render(screen: &mut Screen, ui: &mut egui::Ui) {
                .font(FontId::proportional(25.0))
             );
 
-            ui.add_space(250.0);
+            ui.add_space(100.0);
         });
 
         let clear_button = egui::widgets::Button::new(RichText::new("clear")
             .size(30.0)
-            .color(Color32::WHITE))
-            .min_size(Vec2 { x: 100.0, y: 50.0 });
+            .color(Color32::WHITE));
 
         let back_button = egui::widgets::Button::new(RichText::new("back")
             .size(30.0)
-            .color(Color32::WHITE))
-            .min_size(Vec2 { x: 100.0, y: 50.0 });
+            .color(Color32::WHITE));
 
         let join_button = egui::widgets::Button::new(RichText::new("join")
             .size(30.0)
-            .color(Color32::WHITE))
-            .min_size(Vec2 { x: 100.0, y: 50.0 });
+            .color(Color32::WHITE));
 
-        egui::Grid::new("keypad")
-            .show(ui, |ui| {
-            ui.add_space(40.0);
-            let num_array: [char; 9] = ['7', '8', '9', '4', '5', '6', '1', '2', '3'];
-            for _i in num_array{
-                let keypad_button = egui::widgets::Button::new(RichText::new(_i.to_string())
-                    .size(30.0)
-                    .color(Color32::WHITE))
-                    .min_size(Vec2 { x: 100.0, y: 50.0 });
-                if ui.add(keypad_button).clicked() {
-                    joinid.push(_i);
-                }
-                if _i == '9' {
-                    ui.end_row();
-                    ui.add_space(40.0);
-                }
-                if _i == '6' {
-                    ui.end_row();
-                    ui.add_space(40.0);
-                }
-                if _i == '3' {
-                    ui.end_row();
-                    ui.add_space(40.0);
-                }
-            }
+        let zero_button = egui::widgets::Button::new(RichText::new('0')
+            .size(30.0)
+            .color(Color32::WHITE));
 
-            if ui.add(clear_button).clicked() {
-                joinid.clear();
-            }
-
-            let zero_button = egui::widgets::Button::new(RichText::new('0')
-                .size(30.0)
-                .color(Color32::WHITE))
-                .min_size(Vec2 { x: 100.0, y: 50.0 });
-            if ui.add(zero_button).clicked() {
-                joinid.push('0');
-            }
-
-            if ui.add(back_button).clicked() {
-                joinid.pop();
-            }
-            ui.end_row();
-        });
-
+        let row_length = ui.available_width() * 0.8;
         ui.vertical_centered(|ui| {
-            if ui.add(join_button).clicked() {
-                let (tx, rx) = channel();
-                let joinid2 = joinid.clone();
-                thread::spawn(move || {
-                    tx.send(Connection::conn(ADDR, joinid2.as_bytes())).unwrap();
+            for start in [7, 4, 1] {
+                ui.allocate_ui(Vec2 { x: row_length, y: 50.0 }, |ui| {
+                    ui.columns(3, |columns| {
+                        for i in 0..3 {
+                            columns[i].vertical_centered(|ui| {
+                                let b = Button::new(RichText::new(format!("{}", start + i)).size(30.0).color(Color32::WHITE));
+                                if ui.add_sized(ui.available_size(), b).clicked() {
+                                    joinid.push(char::from_digit((start + i) as u32, 10).unwrap());
+                                };
+                            });
+                        }
+                    });
                 });
-                join_rx = Some(rx);
             }
+            ui.allocate_ui(Vec2 { x: row_length, y: 50.0 }, |ui| {
+                ui.columns(3, |columns| {
+                    columns[0].vertical_centered(|ui| {
+                        if ui.add_sized(ui.available_size(), clear_button).clicked() {
+                            joinid.clear();
+                        }
+                    });
+                    columns[1].vertical_centered(|ui| {
+                        if ui.add_sized(ui.available_size(), zero_button).clicked() {
+                            joinid.push('0');
+                        }
+                    });
+                    columns[2].vertical_centered(|ui| {
+                        if ui.add_sized(ui.available_size(), back_button).clicked() {
+                            joinid.pop();
+                        }
+                    });
+                });
+            });
+            ui.allocate_ui(Vec2 { x: row_length, y: 50.0 }, |ui| {
+                ui.columns(3, |columns| {
+                    columns[1].vertical_centered(|ui| {
+                        if ui.add_sized(ui.available_size(), join_button).clicked() {
+                            let (tx, rx) = channel();
+                            let joinid2 = joinid.clone();
+                            thread::spawn(move || {
+                                tx.send(Connection::conn(ADDR, joinid2.as_bytes())).unwrap();
+                            });
+                            join_rx = Some(rx);
+                        }
+                    });
+                });
+            });
         });
     }
 
