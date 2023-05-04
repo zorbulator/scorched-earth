@@ -142,7 +142,10 @@ pub fn render(screen: &mut Screen, ui: &mut egui::Ui) {
             if ui.button("done").clicked() {
                 if let Some(m) = preview_move {
                     if board.is_move_valid(i, *m) {
-                        let _ = board.make_move(i, *m);
+                        let res = board.make_move(i, *m);
+                        if let Some(color) = res.winner {
+                            error_message = Some(format!("{:?} won!", color));
+                        }
                         match conn.lock().unwrap().send_move(MoveMessage {
                             new_board: board.clone(),
                             new_move: *m,
