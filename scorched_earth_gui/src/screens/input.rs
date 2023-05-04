@@ -14,8 +14,10 @@ const ADDR: &str = "169.231.11.248:8080";
 
 pub fn render(screen: &mut Screen, ui: &mut egui::Ui) {
     // only set if join is clicked
-    let back_button = Button::new(RichText::new("back").size(30.0).color(Color32::WHITE))
-        .min_size(Vec2 { x: 150.0, y: 60.0 });
+    ui.add_space(75.0);
+
+    let back_button = Button::new(RichText::new("back").size(20.0).color(Color32::WHITE))
+        .min_size(Vec2 { x: 100.0, y: 50.0 });
 
     if ui.add(back_button).clicked() {
         *screen = Default::default();

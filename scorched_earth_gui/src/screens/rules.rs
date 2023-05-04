@@ -1,8 +1,13 @@
 use crate::Screen;
-use eframe::{egui::{self, RichText, FontId}, epaint::Color32};
+use eframe::{egui::{self, RichText, FontId}, epaint::{Color32, Vec2}};
 
 pub fn render(screen: &mut Screen, ui: &mut egui::Ui) {
-    if ui.button("back").clicked() {
+    ui.add_space(75.0);
+
+    let back_button = egui::Button::new(RichText::new("back").size(20.0).color(Color32::WHITE))
+        .min_size(Vec2 { x: 100.0, y: 50.0 });
+
+    if ui.add(back_button).clicked() {
         *screen = Default::default();
     }
     ui.vertical_centered(|ui| {

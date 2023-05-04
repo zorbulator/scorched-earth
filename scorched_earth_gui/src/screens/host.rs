@@ -7,10 +7,10 @@ use eframe::{
 };
 
 pub fn render(screen: &mut Screen, ui: &mut egui::Ui) {
-    ui.add_space(100.0);
+    ui.add_space(75.0);
 
-    let back_button = Button::new(RichText::new("back").size(30.0).color(Color32::WHITE))
-        .min_size(Vec2 { x: 150.0, y: 60.0 });
+    let back_button = Button::new(RichText::new("back").size(20.0).color(Color32::WHITE))
+        .min_size(Vec2 { x: 100.0, y: 50.0 });
 
     if ui.add(back_button).clicked() {
         *screen = Default::default();
@@ -30,7 +30,7 @@ pub fn render(screen: &mut Screen, ui: &mut egui::Ui) {
                 RichText::new(format!("{}", joinid))
                     .color(Color32::WHITE)
                     .font(FontId::proportional(150.0))
-                    .size(150.0),
+                    .size(100.0),
             );
         });
         if let Ok(res) = rx.try_recv() {

@@ -11,7 +11,7 @@ fn main() -> Result<(), eframe::Error> {
     eframe::run_native(
         "Scorched Earth",
         options,
-        Box::new(|_| Box::new(State::default())),
+        Box::new(|cc| Box::new(State::new(cc))),
     )
 }
 

@@ -72,10 +72,15 @@ fn draw_board(ui: &mut egui::Ui, board: &Board, preview_move: &Option<Move>, i: 
 }
 
 pub fn render(screen: &mut Screen, ui: &mut egui::Ui) {
-    if ui.button("back").clicked() {
+    ui.add_space(75.0);
+
+    let back_button = egui::Button::new(RichText::new("back").size(20.0).color(Color32::WHITE))
+        .min_size(Vec2 { x: 100.0, y: 50.0 });
+
+    if ui.add(back_button).clicked() {
         *screen = Default::default();
     }
-    ui.add_space(30.0);
+    ui.add_space(15.0);
     let mut error_message: Option<String> = None;
     let mut won: Option<(bool, PlayerColor)> = None;
     if let Screen::Game {
@@ -90,7 +95,7 @@ pub fn render(screen: &mut Screen, ui: &mut egui::Ui) {
         let conn_player = *conn_player;
         ui.vertical_centered(|ui| {
             draw_board(ui, board, preview_move, i);
-            ui.add_space(50.0);
+            ui.add_space(15.0);
         });
 
         // it's the online player's turn
@@ -130,28 +135,29 @@ pub fn render(screen: &mut Screen, ui: &mut egui::Ui) {
             let mut input: Option<Direction> = None;
 
             let left_button = egui::widgets::Button::new(RichText::new("left")
-                .size(10.0)
+                .size(20.0)
                 .color(Color32::WHITE));
                 
             let right_button = egui::widgets::Button::new(RichText::new("right")
-                .size(10.0)
+                .size(20.0)
                 .color(Color32::WHITE));
                 
             let down_button = egui::widgets::Button::new(RichText::new("down")
-                .size(10.0)
+                .size(20.0)
                 .color(Color32::WHITE));
                 
             let up_button = egui::widgets::Button::new(RichText::new("up")
-                .size(10.0)
+                .size(20.0)
                 .color(Color32::WHITE));
                 
             let done_button = egui::widgets::Button::new(RichText::new("done")
-                .size(10.0)
+                .size(20.0)
                 .color(Color32::WHITE));
                 
-            let row_length = ui.available_width() * 0.8;
+            let row_length = ui.available_width() * 0.95;
             ui.vertical_centered(|ui| {
                 ui.allocate_ui(Vec2 { x: row_length, y: 50.0}, |ui| {
+
                     ui.columns(3, |columns| {
                         columns[1].vertical_centered(|ui| {
                             if ui.add_sized(ui.available_size(), up_button).clicked() {
@@ -231,9 +237,5 @@ pub fn render(screen: &mut Screen, ui: &mut egui::Ui) {
 
     if let Some((won, color)) = won {
         *screen = Screen::End { won, color };
-    }
-
-    if ui.button("back").clicked() {
-        *screen = Default::default();
     }
 }

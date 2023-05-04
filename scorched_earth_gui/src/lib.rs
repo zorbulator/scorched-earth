@@ -30,7 +30,7 @@ pub fn android_main(app: AndroidApp) -> Result<(), eframe::Error> {
     eframe::run_native(
         "Scorched Earth",
         options,
-        Box::new(|_| Box::new(State::default())),
+        Box::new(|cc| Box::new(State::new(cc))),
     )
 }
 
@@ -79,6 +79,15 @@ impl Default for Screen {
 #[derive(Default)]
 pub struct State {
     screen: Screen,
+}
+
+impl State {
+    pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
+        let mut style: egui::Style = (*cc.egui_ctx.style()).clone();
+        style.spacing.item_spacing = egui::vec2(10.0, 10.0);
+        cc.egui_ctx.set_style(style);
+        Self::default()
+    }
 }
 
 impl eframe::App for State {
