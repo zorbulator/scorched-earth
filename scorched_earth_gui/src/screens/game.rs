@@ -9,7 +9,11 @@ use scorched_earth_core::{Board, Direction, Move, PlayerColor, TileContents, Vec
 use scorched_earth_network::MoveMessage;
 
 fn draw_board(ui: &mut egui::Ui, board: &Board, preview_move: &Option<Move>, i: usize) {
-    let desired_size = ui.available_width() * 0.6 * egui::vec2(1.0, 1.0);
+    //let desired_size = ui.available_width() * 0.6 * egui::vec2(1.0, 1.0);
+    let width = (ui.available_width()) as usize / 11 * 11;
+    //let desired_size = egui::vec2(11f32 * 30f32, 11f32 * 30f32);
+    let desired_size = egui::vec2(width as f32, width as f32);
+    
     let (rect, _response) =
         ui.allocate_exact_size(desired_size, egui::Sense::focusable_noninteractive());
 
