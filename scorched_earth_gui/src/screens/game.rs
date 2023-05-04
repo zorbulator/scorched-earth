@@ -88,13 +88,14 @@ pub fn render(screen: &mut Screen, ui: &mut egui::Ui) {
         board,
         preview_move,
         rx,
+        conn_player,
     } = screen
     {
         let i = board.turn;
-        //let other_player = (i + 1) % 2;
+        let conn_player = *conn_player;
 
         // it's the online player's turn
-        if conn.lock().unwrap().player_num == i {
+        if conn_player == i {
             *preview_move = None;
             if let None = rx {
                 let (t, r) = channel();

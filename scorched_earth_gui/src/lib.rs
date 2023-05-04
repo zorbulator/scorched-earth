@@ -46,6 +46,7 @@ pub enum Screen {
         board: Board,
         preview_move: Option<Move>,
         rx: Option<Receiver<Result<MoveMessage, scorched_earth_network::Error>>>,
+        conn_player: usize,
     },
     Error(String),
 }

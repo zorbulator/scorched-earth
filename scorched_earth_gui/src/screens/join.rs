@@ -13,11 +13,13 @@ pub fn render(screen: &mut Screen, ui: &mut egui::Ui) {
         if let Ok(res) = rx.try_recv() {
             match res {
                 Ok((conn, board)) => {
+                    let conn_player = conn.player_num;
                     *screen = Screen::Game {
                         conn: Arc::new(Mutex::new(conn)),
                         board,
                         preview_move: None,
                         rx: None,
+                        conn_player,
                     };
                 }
                 Err(e) => {
