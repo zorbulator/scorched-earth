@@ -5,7 +5,7 @@ use scorched_earth_gui::State;
 #[cfg(not(target_arch = "wasm32"))]
 fn main() -> Result<(), eframe::Error> {
     let options = eframe::NativeOptions {
-        initial_window_size: Some(egui::vec2(411.0, 731.0)),
+        initial_window_size: Some(egui::vec2(411.0, 750.0)),
         ..Default::default()
     };
     eframe::run_native(
