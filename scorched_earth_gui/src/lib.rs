@@ -5,7 +5,7 @@ use std::{
 
 #[cfg(target_os = "android")]
 use android_activity::{AndroidApp, WindowManagerFlags};
-use eframe::{egui, epaint::Color32};
+use eframe::{egui::{self, RichText}, epaint::{Color32, Vec2}};
 use scorched_earth_core::{Board, Move, PlayerColor};
 use scorched_earth_network::{Connection, MoveMessage};
 mod screens;
@@ -32,6 +32,18 @@ pub fn android_main(app: AndroidApp) -> Result<(), eframe::Error> {
         options,
         Box::new(|cc| Box::new(State::new(cc))),
     )
+}
+
+pub fn back_button(ui: &mut egui::Ui, screen: &mut Screen) {
+    #[cfg(target_os="android")]
+    ui.add_space(75.0);
+
+    let back_button = egui::Button::new(RichText::new("back").size(20.0).color(Color32::WHITE))
+        .min_size(Vec2 { x: 100.0, y: 50.0 });
+
+    if ui.add(back_button).clicked() {
+        *screen = Default::default();
+    }
 }
 
 pub fn convert_color(p: PlayerColor) -> Color32 {

@@ -1,6 +1,6 @@
 use std::{sync::mpsc::channel, thread};
 
-use crate::{convert_color, Screen};
+use crate::{convert_color, Screen, back_button};
 use eframe::{
     egui::{self, RichText},
     epaint::{Color32, Rect, Rounding, Vec2},
@@ -72,14 +72,7 @@ fn draw_board(ui: &mut egui::Ui, board: &Board, preview_move: &Option<Move>, i: 
 }
 
 pub fn render(screen: &mut Screen, ui: &mut egui::Ui) {
-    ui.add_space(75.0);
-
-    let back_button = egui::Button::new(RichText::new("back").size(20.0).color(Color32::WHITE))
-        .min_size(Vec2 { x: 100.0, y: 50.0 });
-
-    if ui.add(back_button).clicked() {
-        *screen = Default::default();
-    }
+    back_button(ui, screen);
     ui.add_space(15.0);
     let mut error_message: Option<String> = None;
     let mut won: Option<(bool, PlayerColor)> = None;

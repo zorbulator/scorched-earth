@@ -4,7 +4,7 @@ use std::{
     thread,
 };
 
-use crate::Screen;
+use crate::{Screen, back_button};
 use eframe::{
     egui::{self, Button, FontId, RichText},
     epaint::{Color32, Vec2},
@@ -13,15 +13,7 @@ use eframe::{
 const ADDR: &str = "169.231.11.248:8080";
 
 pub fn render(screen: &mut Screen, ui: &mut egui::Ui) {
-    // only set if join is clicked
-    ui.add_space(75.0);
-
-    let back_button = Button::new(RichText::new("back").size(20.0).color(Color32::WHITE))
-        .min_size(Vec2 { x: 100.0, y: 50.0 });
-
-    if ui.add(back_button).clicked() {
-        *screen = Default::default();
-    }
+    back_button(ui, screen);
     let mut join_rx: Option<Receiver<_>> = None;
 
     if let Screen::Input { joinid } = screen {
